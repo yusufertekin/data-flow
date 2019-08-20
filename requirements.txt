@@ -4,3 +4,5 @@ gunicorn==19.9.0
 mohawk==1.0.0
 psycopg2-binary==2.8.3
 requests==2.22.0
+psycogreen==1.0.1
+gevent==1.4.0
