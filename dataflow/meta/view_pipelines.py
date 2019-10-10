@@ -1,17 +1,25 @@
+"""A module that defines view pipeline meta objects."""
 from datetime import datetime
 
+from dataflow import constants
+from dataflow.meta.dataset_pipelines import (
+    InvestmentProjectsDatasetPipeline,
+    OMISDatasetPipeline,
+)
 
-class CompletedOMISOrderViewPipeline():
+
+class CompletedOMISOrderViewPipeline:
+    """Pipeline meta object for Completed OMIS Order View."""
+
     view_name = 'completed_omis_orders'
-    table_name = 'omis_dataset'
-    target_db = 'datasets_db'
-    start_date = datetime(2017, 11, 1)
-    end_date = datetime(2018, 2, 1)
+    dataset_pipeline = OMISDatasetPipeline
+    start_date = datetime(2019, 7, 1)
+    end_date = None
     catchup = True
     fields = [
         ('company_name', 'Company Name'),
         ('dit_team', 'DIT Team'),
-        ('subtotal', 'Subtotal'),
+        ('subtotal::numeric/100', 'Subtotal'),
         ('uk_region', 'UK Region'),
         ('market', 'Market'),
         ('sector', 'Sector'),
@@ -20,25 +28,26 @@ class CompletedOMISOrderViewPipeline():
         ('payment_received_date', 'Payment Received Date'),
         ('completion_date', 'Completion Date'),
     ]
-    where_clause = (
-        "order_status = 'complete' AND "
-        "date_trunc('month', completion_date)::DATE = "
-        "date_trunc('month', to_date('{{ ds }}', 'YYYY-MM-DD'));"
-    )
+    where_clause = """
+        order_status = 'complete' AND
+        date_trunc('month', completion_date)::DATE =
+            date_trunc('month', to_date('{{ ds }}', 'YYYY-MM-DD'));
+    """
     schedule_interval = '@monthly'
 
 
-class CancelledOMISOrderViewPipeline():
+class CancelledOMISOrderViewPipeline:
+    """Pipeline meta object for Cancelled OMIS Order View."""
+
     view_name = 'cancelled_omis_orders'
-    table_name = 'omis_dataset'
-    target_db = 'datasets_db'
-    start_date = datetime(2017, 11, 1)
-    end_date = datetime(2018, 2, 1)
+    dataset_pipeline = OMISDatasetPipeline
+    start_date = datetime(2019, 7, 1)
+    end_date = None
     catchup = True
     fields = [
         ('omis_order_reference', 'OMIS Order Reference'),
         ('company_name', 'Company Name'),
-        ('net_price', 'Net Price'),
+        ('net_price::numeric/100', 'Net Price'),
         ('dit_team', 'DIT Team'),
         ('market', 'Market'),
         ('sector', 'Sector'),
@@ -46,23 +55,37 @@ class CancelledOMISOrderViewPipeline():
         ('cancelled_date', 'Cancelled Date'),
         ('cancellation_reason', 'Cancellation Reason'),
     ]
-    where_clause = (
-        "order_status = 'cancelled' AND "
-        "cancelled_date::DATE >= "
-        "date_trunc('year', to_date('{{ first_day_of_financial_year }}', 'YYYY-MM-DD'));"
-    )
+    where_clause = """
+        order_status = 'cancelled' AND
+        cancelled_date::DATE >=
+        {% if macros.datetime.strptime(ds, '%Y-%m-%d') <=
+            macros.datetime.strptime('{0}-{1}'.format(macros.ds_format(ds, '%Y-%m-%d', '%Y'),
+                                                      month_day_financial_year),
+                                     '%Y-%m-%d') %}
+            to_date('{{ macros.ds_format(macros.ds_add(ds, -365),
+                                         '%Y-%m-%d',
+                                         '%Y') }}-{{ month_day_financial_year }}',
+                    'YYYY-MM-DD');
+        {% else %}
+            to_date('{{ macros.ds_format(ds,
+                                         '%Y-%m-%d',
+                                         '%Y') }}-{{ month_day_financial_year }}',
+                    'YYYY-MM-DD');
+        {% endif %}
+    """
     params = {
-        'first_day_of_financial_year': datetime(2017, 10, 1)
+        'month_day_financial_year': constants.FINANCIAL_YEAR_FIRST_MONTH_DAY,
     }
     schedule_interval = '@monthly'
 
 
-class OMISClientSurveyViewPipeline():
+class OMISClientSurveyViewPipeline:
+    """Pipeline meta object for OMIS Client Survey View."""
+
     view_name = 'omis_client_survey'
-    table_name = 'omis_dataset'
-    target_db = 'datasets_db'
-    start_date = datetime(2017, 11, 1)
-    end_date = datetime(2018, 2, 1)
+    dataset_pipeline = OMISDatasetPipeline
+    start_date = datetime(2019, 7, 1)
+    end_date = None
     catchup = True
     fields = [
         ('company_name', 'Company Name'),
@@ -81,9 +104,27 @@ class OMISClientSurveyViewPipeline():
         ('company_registered_address_country', 'Company Registered Address Country'),
         ('company_registered_address_postcode', 'Company Registered Address Postcode'),
     ]
-    where_clause = (
-        "order_status = 'complete' AND "
-        "date_trunc('month', completion_date)::DATE = "
-        "date_trunc('month', to_date('{{ ds }}', 'YYYY-MM-DD'));"
-    )
+    where_clause = """
+        order_status = 'complete' AND
+        date_trunc('month', completion_date)::DATE =
+            date_trunc(
+                'month',
+                to_date('{{ ds }}', 'YYYY-MM-DD'));
+    """
+    schedule_interval = '@monthly'
+
+
+class InvestmentProjectsViewPipeline:
+    """Pipeline meta object for Investment Projects View."""
+
+    view_name = 'investment_projects'
+    dataset_pipeline = InvestmentProjectsDatasetPipeline
+    start_date = datetime(2019, 7, 1)
+    end_date = None
+    catchup = True
+    fields = '__all__'
+    where_clause = """
+        date_trunc('month', created_on)::DATE =
+            date_trunc('month', to_date('{{ ds }}', 'YYYY-MM-DD'));
+    """
     schedule_interval = '@monthly'

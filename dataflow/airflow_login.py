@@ -25,8 +25,6 @@ Copy and alter this file and put in your PYTHONPATH as airflow_login.py,
 the new module will override this one.
 
 """
-import os
-
 import flask_login
 from flask_login import login_required, current_user, logout_user, login_user  # noqa: F401
 from flask_oauthlib.client import OAuth
@@ -39,6 +37,8 @@ from airflow import settings  # noqa: F401
 from airflow import models
 from airflow.utils.db import provide_session
 from airflow.utils.log.logging_mixin import LoggingMixin
+
+from dataflow import constants
 
 
 log = LoggingMixin().log
@@ -90,10 +90,10 @@ class AuthbrokerBackend(object):
         self.auth_path = 'o/authorize/'
         self.token_path = 'o/token/'
         self.me_path = 'api/v1/user/me/'
-        self.client_id = os.environ.get('AUTHBROKER_CLIENT_ID')
-        self.client_secret = os.environ.get('AUTHBROKER_CLIENT_SECRET')
-        self.allowed_domains = os.environ.get('AUTHBROKER_ALLOWED_DOMAINS').split(',')
-        self.base_url = os.environ.get('AUTHBROKER_URL')
+        self.client_id = constants.AUTHBROKER_CLIENT_ID
+        self.client_secret = constants.AUTHBROKER_CLIENT_SECRET
+        self.allowed_domains = constants.AUTHBROKER_ALLOWED_DOMAINS.split(',')
+        self.base_url = constants.AUTHBROKER_URL
 
     def init_app(self, flask_app):
         self.flask_app = flask_app
